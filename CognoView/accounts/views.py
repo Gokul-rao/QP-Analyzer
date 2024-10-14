@@ -43,3 +43,8 @@ def LogoutPage(request):
     logout(request)
     return redirect('login')
 
+def question_cat(request):
+    return render(request,"qpanalyze/genquestions.html")
+
+def report(request):
+    return render(request,"qpanalyze/report.html")

@@ -1,0 +1,57 @@
+{% extends 'qpanalyze/base.html' %}
+
+{% block mymessage %}
+{% load static %}
+
+<div class="pagetitle">
+    <h1>Generating questions</h1>
+    {% comment %} <nav>
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+        <li class="breadcrumb-item">Tables</li>
+        <li class="breadcrumb-item active">General</li>
+      </ol>
+    </nav> {% endcomment %}
+  </div><!-- End Page Title -->
+
+  <section class="section">
+    <div class="row">
+        <div class="col-lg">
+
+            <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Analyzing Questions...</h5>
+
+                <!-- Default Table -->
+                <table class="table">
+                <thead>
+                    <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Questions</th>
+                    <th scope="col">Cognitive level</th>
+                    
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                    <th scope="row">1</th>
+                    <td>Question 1</td>
+                    <td>U</td>
+                    
+                    </tr>
+                    <tr>
+                    <th scope="row">2</th>
+                    <td>Question 2</td>
+                    <td>R</td>
+                    
+                    </tr>
+                    
+                </tbody>
+                </table>
+                <!-- End Default Table Example -->
+            </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %} 

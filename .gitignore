@@ -164,3 +164,4 @@ cython_debug/
 **/static/assets/**
 **/migrations/
 **/.vscode
+**/shared/ml_model/** 
