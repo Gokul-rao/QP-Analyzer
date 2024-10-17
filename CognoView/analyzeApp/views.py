@@ -6,6 +6,16 @@ from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required
 
+from django.template.loader import render_to_string
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.units import inch
+
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+
 from .shared.question_extractor import QuestionExtractor
 
 from .models import Department, QuestionBank, Report, Subject, Semester, ExamType
@@ -21,7 +31,68 @@ def analyze(request):
     return render(request, "qpanalyze/analyze.html")
 
 def abt(request):
-    return render(request, "qpanalyze/abt.html")
+    departments = Department.objects.all()
+    semesters = list(Semester.choices)
+    exam_type = list(ExamType.choices)
+
+    subjects = []
+    subject_count = 0
+
+    # Check if the department code is present in the GET parameters
+    if 'department_code' in request.GET:
+        department_code = request.GET['department_code']
+        sem = request.GET['semester']
+        subjects = get_subject_by_department(department_code, sem)
+        subject_count = len(subjects)
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse(subjects, safe=False)
+    
+    if request.method == 'POST':
+        subject_count = int(request.POST.get('subject_count', 0))
+        department_code = request.POST.get('department', '')
+        semester = request.POST.get('semester', '')
+        exam_type = request.POST.get('exam_type', '')
+        subject_code = request.POST.get('subject')
+        question_text = request.POST.get('question', '')
+
+        # Get department and semester objects
+        department = Department.objects.get(department_code=department_code)
+        batch_identifier = str(uuid.uuid4())
+        
+        subject = Subject.objects.get(subject_code=subject_code)
+
+        qp_path = os.path.dirname('media/')
+        question_extractor = QuestionExtractor(qp_path)
+
+        # Split the input into a list of questions
+        questions_list = [question.strip() for question in question_text.splitlines() if question.strip()]
+        
+        for question in questions_list:
+            cognitive_level = question_extractor.predict_cognitive_level(question)
+            
+            QuestionBank.objects.create(
+                department_code=department,
+                semester=semester,
+                subject_code=subject,
+                question=question,
+                cognitive_level=cognitive_level.upper(),
+                exam_type=exam_type,
+                is_verified=True,
+                batch_id=batch_identifier
+            )
+        return redirect('fetch_questions', batch_identifier=batch_identifier)
+
+    context = {
+        'departments': departments,
+        'subjects': subjects,
+        'subjects_count': subject_count,
+        'semesters': semesters,
+        'exam_type': exam_type
+    }
+
+    return render(request, "qpanalyze/abt.html", context=context)
+
 
 def abf(request):
 
@@ -206,7 +277,7 @@ def report_detail(request, batch_id):
         totals['total_percentage'] += report.total_percentage
     
     averages = {
-        key: (value / report_count) if report_count > 0 else 0 for key, value in totals.items()
+        key: (float(value) / report_count) if report_count > 0 else 0 for key, value in totals.items()
     }
 
     # Chart
@@ -255,4 +326,130 @@ def report_detail(request, batch_id):
         'averages': averages
     }
 
+    if 'download_pdf' in request.GET:
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="report_{batch_id}.pdf"'
+
+        # Create a SimpleDocTemplate for the PDF document
+        pdf_buffer = SimpleDocTemplate(response, pagesize=A4)
+
+        # List to hold the elements of the PDF
+        elements = []
+
+        # Add a Title to the PDF
+        styles = getSampleStyleSheet()
+        title = Paragraph(f"Cognitive Levels Report", styles['Title'])
+        elements.append(title)
+        elements.append(Spacer(1, 0.2 * inch)) 
+
+        # Add a general introduction paragraph
+        intro_text = Paragraph(
+            f"This report provides an analysis of cognitive levels for this batch {batch_id}. \nBelow is the breakdown for each subject.",
+            styles['BodyText']
+        )
+        elements.append(intro_text)
+        elements.append(Spacer(1, 0.2 * inch))
+
+        # Add a table with cognitive levels data
+        table_data = [['Subject Code', 'R (%)', 'U (%)', 'AY (%)', 'AZ (%)', 'E (%)', 'C (%)', 'Total (%)']]
+
+        for report in reports:
+            table_data.append([
+                report.subject_code,
+                f"{float(report.remember):.2f}",
+                f"{float(report.understand):.2f}",
+                f"{float(report.apply):.2f}",
+                f"{float(report.analyze):.2f}",
+                f"{float(report.evaluate):.2f}",
+                f"{float(report.create):.2f}",
+                f"{float(report.total_percentage):.2f}"
+            ])
+
+            table_data.append([
+                f"Total",
+                f"{float(totals['remember']):.2f}",
+                f"{float(totals['understand']):.2f}",
+                f"{float(totals['apply']):.2f}",
+                f"{float(totals['analyze']):.2f}",
+                f"{float(totals['evaluate']):.2f}",
+                f"{float(totals['create']):.2f}",
+                f"{float(totals['total_percentage']):.2f}"
+            ])
+
+            table_data.append([
+                f"Average",
+                f"{float(averages['remember']):.2f}",
+                f"{float(averages['understand']):.2f}",
+                f"{float(averages['apply']):.2f}",    
+                f"{float(averages['analyze']):.2f}",  
+                f"{float(averages['evaluate']):.2f}", 
+                f"{float(averages['create']):.2f}",
+                f"{float(averages['total_percentage']):.2f}"
+            ])
+
+        # Create a Table and style it
+        table = Table(table_data)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ]))
+
+         # Add the table to the PDF elements
+        elements.append(table)
+        elements.append(Spacer(1, 0.5 * inch))
+
+        # Add a summary paragraph
+        summary_text = Paragraph(f"The cognitive level distribution across all subjects is as follows.", styles['BodyText'])
+        elements.append(summary_text)
+        elements.append(Spacer(1, 0.2 * inch))
+
+        add_bar_chart_to_report(elements, averages)
+
+        # Finalize and build the PDF
+        pdf_buffer.build(elements)
+
+        return response
+
     return render(request, "qpanalyze/report_detail.html", context=context)
+
+
+def add_bar_chart_to_report(elements, report_data):
+    drawing = Drawing(400, 200)  # Create a drawing canvas
+    
+    # Create the bar chart
+    bar_chart = VerticalBarChart()
+    bar_chart.x = 50
+    bar_chart.y = 50
+    bar_chart.height = 150
+    bar_chart.width = 300
+
+    # Set data and labels for the bar chart
+    bar_chart.data = [  # List of values for each category
+        [
+            report_data['remember'], 
+            report_data['understand'], 
+            report_data['apply'], 
+            report_data['analyze'], 
+            report_data['evaluate'], 
+            report_data['create']
+        ]
+    ]
+    
+    bar_chart.categoryAxis.categoryNames = ['Remember', 'Understand', 'Apply', 'Analyze', 'Evaluate', 'Create']
+    
+    # Customize the appearance
+    bar_chart.bars[0].fillColor = colors.blue
+    bar_chart.bars[1].fillColor = colors.green
+
+    # Add the chart to the drawing
+    drawing.add(bar_chart)
+
+    # Add the drawing (chart) to the PDF elements
+    elements.append(drawing)
+    return elements

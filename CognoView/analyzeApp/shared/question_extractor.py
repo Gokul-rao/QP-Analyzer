@@ -8,6 +8,7 @@ class QuestionExtractor:
         self.question_paper_path = question_paper_path
         self.question_options = ('(a)', '(b)', '(c)', '(d)', '(e)')
         self.question_pattern = r'^\d+\.\s*|\([a-z]\)\s*'
+        self.marks_pattern = r'(\d+\s*[×x]\s*\d+\s*=\s*\d+)'
 
         self.question_predictor = CognitiveLevelPredictor()
 
@@ -29,8 +30,13 @@ class QuestionExtractor:
         for sentence in sentences:
             sentence = sentence.strip()
 
+            # Filter out any marks field using the marks pattern
+            if re.search(self.marks_pattern, sentence):
+                continue
+
             if sentence and (sentence[0].isdigit() or sentence.startswith(self.question_options)):
-                questions.append(sentence)
+                cleaned_question = re.sub(self.question_pattern, '', sentence).strip()
+                questions.append(cleaned_question)
             else:
                 continue
 
