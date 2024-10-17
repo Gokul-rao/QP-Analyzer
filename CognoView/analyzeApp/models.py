@@ -54,6 +54,8 @@ class Subject(models.Model):
     
 
 class QuestionBank(models.Model):
+    batch_id = models.CharField(max_length=100, blank=True, null=True)
+    department_code = models.ForeignKey(Department, on_delete=models.CASCADE)
     semester = models.IntegerField(default=None, choices=Semester.choices)
     subject_code = models.ForeignKey(Subject, on_delete=models.CASCADE)
     question = models.TextField()
@@ -67,6 +69,7 @@ class QuestionBank(models.Model):
     
 
 class Report(models.Model):
+    batch_id = models.CharField(max_length=100, blank=True, null=True)
     subject_code = models.ForeignKey(Subject, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     remember = models.DecimalField(max_digits=5, decimal_places=2)

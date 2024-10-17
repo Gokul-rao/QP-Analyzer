@@ -16,7 +16,10 @@ class SubjectAdmin(admin.ModelAdmin):
 
 admin.site.register(Subject, SubjectAdmin)
 
+class QuestionBankAdmin(admin.ModelAdmin):
+    list_display = ('subject_code', 'question', 'cognitive_level', 'exam_type', 'batch_id')
+    list_filer = ('department_code', 'subject_code', 'semester')
 
-admin.site.register(QuestionBank)
+admin.site.register(QuestionBank, QuestionBankAdmin)
 
 admin.site.register(Department)

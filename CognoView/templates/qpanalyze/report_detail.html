@@ -1,0 +1,115 @@
+{% extends 'qpanalyze/base.html' %}
+{% block mymessage %}
+{% load static %}
+
+  <div class="pagetitle">
+    <h1>Report </h1>
+  </div><!-- End Page Title -->
+  <section class="section">
+    <div class="row">
+        <div class="col-lg">
+          <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Report for Batch ID: {{ batch_id }}</h5>
+                <!-- Default Table -->
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Subject Code</th>
+                            <th>Remember (%)</th>
+                            <th>Understand (%)</th>
+                            <th>Apply (%)</th>
+                            <th>Analyze (%)</th>
+                            <th>Evaluate (%)</th>
+                            <th>Create (%)</th>
+                            <th>Total Percentage (%)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                        <tr>
+                            <td>{{ report.subject_code.subject_code }}</td>
+                            <td>{{ report.remember }}</td>
+                            <td>{{ report.understand }}</td>
+                            <td>{{ report.apply }}</td>
+                            <td>{{ report.analyze }}</td>
+                            <td>{{ report.evaluate }}</td>
+                            <td>{{ report.create }}</td>
+                            <td>{{ report.total_percentage }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th><b>Total</b></th>
+                            <td>{{ totals.remember }}</td>
+                            <td>{{ totals.understand }}</td>
+                            <td>{{ totals.apply }}</td>
+                            <td>{{ totals.analyze }}</td>
+                            <td>{{ totals.evaluate }}</td>
+                            <td>{{ totals.create }}</td>
+                            <td>{{ totals.total_percentage }}</td>
+                        </tr>
+
+                        <tr>
+                            <th><b>Average</b></th>
+                            <td>{{ averages.remember }}</td>
+                            <td>{{ averages.understand }}</td>
+                            <td>{{ averages.apply }}</td>
+                            <td>{{ averages.analyze }}</td>
+                            <td>{{ averages.evaluate }}</td>
+                            <td>{{ averages.create }}</td>
+                            <td>{{ averages.total_percentage }}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <!-- End Default Table Example -->
+
+                <div class="row mt-3 mb-3">
+                    <div class="col-10 text-center">
+                        <h5 class="card-title">Cognitive Level Distribution</h5>
+                        <canvas id="myChart" width="600" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!--<div class="row mb-3">
+                  <div class="col-10 text-center">
+                    <button type="button" class="btn btn-primary w-50" id="generate-report-btn">Generate Report</button>
+                  </div>
+                </div>-->
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function(){
+            var chartData = {{ chart_data|safe }}; 
+            var ctx = $('#myChart').get(0).getContext('2d');
+            var myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.labels,  // X-axis labels for cognitive levels
+                    datasets: chartData.datasets  // Y-axis data for each cognitive level
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Percentage (%)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Cognitive Levels'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends 'qpanalyze/base.html' %}
+{% block mymessage %}
+{% load static %}
+
+  <div class="pagetitle">
+    <h1>Question Bank</h1>
+  </div><!-- End Page Title -->
+  <section class="section">
+    <form method="POST" action="{% url 'generate_report' batch_id=batch_id %}">
+      {% csrf_token %}
+      <div class="row">
+        <div class="col-lg">
+          <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Cognitive Level Prediction</h5>
+                <!-- Default Table -->
+                <table class="table">
+                <thead>
+                    <tr>
+                      <th scope="col">#</th>
+                      <th scope="col">Exam Type </th>
+                      <th scope="col">Subject Code </th>
+                      <th scope="col">Questions</th>
+                      <th scope="col">Cognitive level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                  {% for question in questions %}
+                    <tr>
+                      <td scope="row">{{ forloop.counter }}</td>
+                      <td>{{ question.exam_type }}</td>
+                      <td>{{ question.subject_code.subject_code }}</td>
+                      <td>{{ question.question }}</td>
+                      <td>{{ question.cognitive_level }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+                </table>
+                <!-- End Default Table Example -->
+
+                <div class="row mb-3">
+                  <div class="col-10 text-center">
+                    <button type="submit" class="btn btn-primary w-50">Generate Report</button>
+                  </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </section>
+{% endblock %}
